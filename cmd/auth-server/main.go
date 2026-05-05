@@ -8,6 +8,7 @@ import (
   "strconv"
   "time"
 
+  httpx "github.com/loaikanou/GoAuth/internal/httpx"
   "github.com/loaikanou/GoAuth/internal/store"
   "github.com/loaikanou/GoAuth/internal/token"
 )
@@ -54,15 +55,14 @@ func getEnv(key, def string) string {
 // healthHandler provides a simple liveness probe.
 func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
   w.WriteHeader(http.StatusOK)
-  w.Write([]byte(`{"status":"ok"}`))
+  httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: map[string]string{"status": "ok"}})
 }
 
 // authorizeHandler returns a placeholder authorization code.
 func (s *Server) authorizeHandler(w http.ResponseWriter, r *http.Request) {
   // In a real system, this would redirect to a login page or consent screen.
   resp := map[string]string{"code": "AUTH_CODE_12345"}
-  w.Header().Set("Content-Type", "application/json")
-  json.NewEncoder(w).Encode(resp)
+  httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: resp})
 }
 
 // tokenHandler issues access/refresh tokens for MVP flows.
@@ -91,26 +91,24 @@ func (s *Server) tokenHandler(w http.ResponseWriter, r *http.Request) {
     "refresh_token": refresh,
     "scope":         "openid profile email",
   }
-  w.Header().Set("Content-Type", "application/json")
-  json.NewEncoder(w).Encode(resp)
+  httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: resp})
 }
 
 func (s *Server) revokeHandler(w http.ResponseWriter, r *http.Request) {
   // Placeholder: in production, revoke token(s) in store/cache.
-  w.Header().Set("Content-Type", "application/json")
-  json.NewEncoder(w).Encode(map[string]string{"status": "revoked"})
+  httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: map[string]string{"status": "revoked"}})
 }
 
 func (s *Server) introspectHandler(w http.ResponseWriter, r *http.Request) {
   // Simple introspection response for MVP.
-  w.Header().Set("Content-Type", "application/json")
-  json.NewEncoder(w).Encode(map[string]interface{}{
+  info := map[string]interface{}{
     "active":     true,
     "sub":        "system",
     "tenant_id":  "tenant1",
     "exp":        time.Now().Add(1 * time.Hour).Unix(),
     "token_type": "access",
-  })
+  }
+  httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: info})
 }
 
 func (s *Server) tenantInfoHandler(w http.ResponseWriter, r *http.Request) {
@@ -126,8 +124,7 @@ func (s *Server) tenantInfoHandler(w http.ResponseWriter, r *http.Request) {
     "slug":      tenantID,
     "default_language": "en",
   }
-  w.Header().Set("Content-Type", "application/json")
-  json.NewEncoder(w).Encode(info)
+  httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: info})
 }
 
 func (s *Server) createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -149,6 +146,5 @@ func (s *Server) createUserHandler(w http.ResponseWriter, r *http.Request) {
     "status": "active",
   }
   // In a real implementation, we'd persist the user to the DB. Here we just return the blob.
-  w.Header().Set("Content-Type", "application/json")
-  json.NewEncoder(w).Encode(user)
+  httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: user})
 }
