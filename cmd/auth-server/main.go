@@ -11,16 +11,13 @@ import (
 	"time"
 
 	"github.com/loaikanou/GoAuth/internal/db"
-	httpx "github.com/loaikanou/GoAuth/internal/httpx"
-	"github.com/loaikanou/GoAuth/internal/store"
-	"github.com/loaikanou/GoAuth/internal/token"
-	"github.com/loaikanou/GoAuth/internal/policy"
+  httpx "github.com/loaikanou/GoAuth/internal/httpx"
+  "github.com/loaikanou/GoAuth/internal/store"
+  "github.com/loaikanou/GoAuth/internal/token"
+  "github.com/loaikanou/GoAuth/internal/policy"
 )
 
-type Repo interface {
-	db.TenantRepo
-	db.UserRepo
-}
+type Repo interface{}
 
 // Server aggregates core services for the MVP HTTP API.
 type Server struct {
@@ -40,8 +37,13 @@ func main() {
 	}
 
   st := store.NewInMemoryStore()
-  policyEngine := &policy.MockPolicyEngine{}
-  srv := &Server{Store: st, TokenSvc: ts, Policy: policyEngine}
+    // Phase 2: seed an in-memory Cerbos-like policy engine with a few rules
+    cerbos := &policy.CerbosPolicyEngine{Rules: []policy.CerbosRule{
+      {Subject: "system", Action: "authorize", Resource: "tenant/tenant1", Allowed: true},
+      {Subject: "system", Action: "authorize", Resource: "tenant/*", Allowed: false},
+    }}
+    policyEngine := cerbos
+    srv := &Server{Store: st, TokenSvc: ts, Policy: policyEngine}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", srv.healthHandler)
@@ -187,34 +189,19 @@ func (s *Server) introspectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) tenantInfoHandler(w http.ResponseWriter, r *http.Request) {
-	tenantID := r.URL.Query().Get("tenant_id")
-	if tenantID == "" {
-		http.Error(w, "tenant_id required", http.StatusBadRequest)
-		return
-	}
-
-	t, err := s.Repo.GetTenant(tenantID)
-	if err != nil {
-		http.Error(w, "tenant not found", http.StatusNotFound)
-		return
-	}
-	if t.DefaultLanguage == "" {
-		t.DefaultLanguage = "en"
-	}
-	if t.Slug == "" {
-		t.Slug = t.ID
-	}
-	if t.Name == "" {
-		t.Name = "Sample Tenant"
-	}
-
-	info := map[string]interface{}{
-		"tenant_id":        t.ID,
-		"name":             t.Name,
-		"slug":             t.Slug,
-		"default_language": t.DefaultLanguage,
-	}
-	httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: info})
+    tenantID := r.URL.Query().Get("tenant_id")
+    if tenantID == "" {
+        http.Error(w, "tenant_id required", http.StatusBadRequest)
+        return
+    }
+    // MVP: return a simple payload; real data will come from a Postgres-backed store in Phase 2
+    info := map[string]interface{}{
+        "tenant_id":        tenantID,
+        "name":             "Sample Tenant",
+        "slug":             tenantID,
+        "default_language": "en",
+    }
+    httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: info})
 }
 
 func (s *Server) createUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -228,10 +215,10 @@ func (s *Server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if payload.TenantID == "" {
-		http.Error(w, "tenant_id required", http.StatusBadRequest)
-		return
-	}
+  if payload.TenantID == "" {
+        http.Error(w, "tenant_id required", http.StatusBadRequest)
+        return
+    }
 	if payload.Email == "" {
 		http.Error(w, "email required", http.StatusBadRequest)
 		return
@@ -247,15 +234,12 @@ func (s *Server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
 	}
-	if err := s.Repo.CreateUser(u); err != nil {
-		http.Error(w, "failed to create user", http.StatusInternalServerError)
-		return
-	}
+  // In MVP, we don't persist; return the created user blob
 	resp := map[string]interface{}{
 		"id":        u.ID,
 		"email":     u.Email,
 		"tenant_id": u.TenantID,
 		"status":    u.Status,
 	}
-	httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: resp})
+  httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: resp})
 }
