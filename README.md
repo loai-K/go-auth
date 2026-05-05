@@ -3,13 +3,13 @@
 GoAuth is a production‑grade authentication and authorization platform built in Go. This repository contains a Phase 1 MVP scaffold (in‑memory MVP server, REST/gRPC surface, OpenAPI/Proto contracts, and initial migration groundwork) and a plan for progression to a Postgres‑backed, multi‑tenant, policy‑driven platform.
 
 ## Quick start
-- Prerequisites: Go 1.20+, optionally Docker for containerized runs, and (for Phase 2+) a Postgres instance.
+- Prerequisites: Go 1.26+, optionally Docker for containerized runs, and (for Phase 2+) a Postgres instance.
 - Build: `make build`
 - Run MVP server (in‑memory): `make run` or `go run ./cmd/auth-server`
 - Run unit tests: `make test` or `go test ./...`
 - Run Docker container (Phase 1 MVP): `docker build -t goauth:phase1-mvp .` followed by `docker run -p 8080:8080 goauth:phase1-mvp`
   - Endpoints (Phase 1 MVP):
-    - GET /healthz
+    - GET /health
     - POST /auth/authorize
     - POST /token
     - POST /token/revoke

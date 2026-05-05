@@ -27,7 +27,7 @@ func main() {
   srv := &Server{Store: st, TokenSvc: ts}
 
   mux := http.NewServeMux()
-  mux.HandleFunc("/healthz", srv.healthHandler)
+  mux.HandleFunc("/health", srv.healthHandler)
   mux.HandleFunc("/auth/authorize", srv.authorizeHandler)
   mux.HandleFunc("/token", srv.tokenHandler)
   mux.HandleFunc("/token/revoke", srv.revokeHandler)
