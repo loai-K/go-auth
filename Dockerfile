@@ -7,7 +7,10 @@ RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o /bin/auth-server ./cmd/aut
 
 FROM alpine:latest
 RUN apk --no-cache add ca-certificates
-WORKDIR /root/
-COPY --from=builder /bin/auth-server ./auth-server
+RUN addgroup -S app && adduser -S -G app -u 10001 app
+COPY --from=builder /bin/auth-server /usr/local/bin/auth-server
+RUN chown app:app /usr/local/bin/auth-server && chmod 0755 /usr/local/bin/auth-server
+USER app
+WORKDIR /home/app
 EXPOSE 8080
-ENTRYPOINT ["/root/auth-server"]
+ENTRYPOINT ["/usr/local/bin/auth-server"]

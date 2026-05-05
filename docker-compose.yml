@@ -20,6 +20,14 @@ services:
       timeout: 3s
       retries: 5
     restart: unless-stopped
+    init: true
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
 
   postgres:
     image: postgres:18-alpine
@@ -27,8 +35,8 @@ services:
       - POSTGRES_DB=goauth
       - POSTGRES_USER=goauth
       - POSTGRES_PASSWORD=goauth
-    ports:
-      - "5432:5432"
+    expose:
+      - 5432
     volumes:
       - postgres_data:/var/lib/postgresql
     healthcheck:
