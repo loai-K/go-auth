@@ -83,7 +83,7 @@ func (s *Service) ParseAndValidate(tokenString string) (*Claims, error) {
 			return nil, fmt.Errorf("unexpected signing method: %v", t.Header["alg"])
 		}
 		return s.SigningKey, nil
-	})
+	}, jwt.WithIssuer(s.Issuer))
 	if err != nil {
 		return nil, err
 	}
