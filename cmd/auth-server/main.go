@@ -10,14 +10,20 @@ import (
 	"strings"
 	"time"
 
+	"github.com/loaikanou/GoAuth/internal/db"
 	httpx "github.com/loaikanou/GoAuth/internal/httpx"
 	"github.com/loaikanou/GoAuth/internal/store"
 	"github.com/loaikanou/GoAuth/internal/token"
 )
 
+type Repo interface {
+	db.TenantRepo
+	db.UserRepo
+}
+
 // Server aggregates core services for the MVP HTTP API.
 type Server struct {
-	Store    *store.InMemoryStore
+	Repo     Repo
 	TokenSvc *token.Service
 }
 
@@ -31,8 +37,11 @@ func main() {
 		log.Fatalf("invalid JWT signing configuration: %v", err)
 	}
 
-	st := store.NewInMemoryStore()
-	srv := &Server{Store: st, TokenSvc: ts}
+	repo, closeRepo := loadRepo()
+	if closeRepo != nil {
+		defer closeRepo()
+	}
+	srv := &Server{Repo: repo, TokenSvc: ts}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", srv.healthHandler)
@@ -51,6 +60,17 @@ func main() {
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatalf("server failed: %v", err)
 	}
+}
+
+func loadRepo() (Repo, func()) {
+	if dsn, ok := os.LookupEnv("POSTGRES_DSN"); ok && dsn != "" {
+		pg, err := db.Connect(db.Config{DSN: dsn})
+		if err != nil {
+			log.Fatalf("failed to connect to Postgres: %v", err)
+		}
+		return pg, func() { _ = pg.Close() }
+	}
+	return store.NewInMemoryStore(), nil
 }
 
 func loadJWTSigningKey() (key []byte, ephemeral bool) {
@@ -159,12 +179,27 @@ func (s *Server) tenantInfoHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "tenant_id required", http.StatusBadRequest)
 		return
 	}
-	// Fetch from store if available; otherwise return a minimal payload.
+
+	t, err := s.Repo.GetTenant(tenantID)
+	if err != nil {
+		http.Error(w, "tenant not found", http.StatusNotFound)
+		return
+	}
+	if t.DefaultLanguage == "" {
+		t.DefaultLanguage = "en"
+	}
+	if t.Slug == "" {
+		t.Slug = t.ID
+	}
+	if t.Name == "" {
+		t.Name = "Sample Tenant"
+	}
+
 	info := map[string]interface{}{
-		"tenant_id":        tenantID,
-		"name":             "Sample Tenant",
-		"slug":             tenantID,
-		"default_language": "en",
+		"tenant_id":        t.ID,
+		"name":             t.Name,
+		"slug":             t.Slug,
+		"default_language": t.DefaultLanguage,
 	}
 	httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: info})
 }
@@ -179,14 +214,35 @@ func (s *Server) createUserHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "bad request", http.StatusBadRequest)
 		return
 	}
-	// Create a simple user in memory (no password for MVP).
-	id := "user_" + strconv.FormatInt(time.Now().UnixNano(), 10)
-	user := map[string]interface{}{
-		"id":        id,
-		"email":     payload.Email,
-		"tenant_id": payload.TenantID,
-		"status":    "active",
+
+	if payload.TenantID == "" {
+		http.Error(w, "tenant_id required", http.StatusBadRequest)
+		return
 	}
-	// In a real implementation, we'd persist the user to the DB. Here we just return the blob.
-	httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: user})
+	if payload.Email == "" {
+		http.Error(w, "email required", http.StatusBadRequest)
+		return
+	}
+
+	id := "user_" + strconv.FormatInt(time.Now().UnixNano(), 10)
+	u := &store.User{
+		ID:        id,
+		TenantID:  payload.TenantID,
+		Email:     payload.Email,
+		UserType:  "end_user",
+		Status:    "active",
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+	}
+	if err := s.Repo.CreateUser(u); err != nil {
+		http.Error(w, "failed to create user", http.StatusInternalServerError)
+		return
+	}
+	resp := map[string]interface{}{
+		"id":        u.ID,
+		"email":     u.Email,
+		"tenant_id": u.TenantID,
+		"status":    u.Status,
+	}
+	httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: resp})
 }
