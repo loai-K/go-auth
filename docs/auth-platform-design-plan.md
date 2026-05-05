@@ -91,6 +91,14 @@ Phase 1 schema sketch (core tables)
 - Phase 3: Extensibility (webhooks, actions), i18n localization pipeline, governance dashboards
 - Phase 4: Security hardening, compliance, advanced analytics, DR testing
 
+### Phase 2: Policy engine integration (Cerbos)
+- Introduce Cerbos as the policy engine, wire a PolicyService to query for access decisions
+- Implement policy versioning, staging, dry-run, and production promotion
+- Extend RBAC/ABAC with role bindings by tenant and per-resource attributes
+- Phase 2: RBAC/ABAC enforcement, policy engine integration, per‑tenant schema migration plan if needed
+- Phase 3: Extensibility (webhooks, actions), i18n localization pipeline, governance dashboards
+- Phase 4: Security hardening, compliance, advanced analytics, DR testing
+
 ## 12. Risks & mitigations
 - MVP scope risk: maintain strict Phase 1 scope; defer non‑critical features
 - Data isolation risk: start with RLS; plan per‑tenant schemas if needed
