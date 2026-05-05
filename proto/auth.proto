@@ -1,0 +1,50 @@
+syntax = "proto3";
+package auth;
+
+service AuthService {
+  rpc GenerateAccessToken (TokenRequest) returns (TokenResponse);
+  rpc Authorize (AuthRequest) returns (AuthResponse);
+  rpc RevokeToken (TokenRevocationRequest) returns (TokenRevocationResponse);
+  rpc Introspect (TokenIntrospectRequest) returns (IntrospectResponse);
+}
+
+message TokenRequest {
+  string tenant_id = 1;
+  string user_id = 2;
+}
+
+message TokenResponse {
+  string access_token = 1;
+  string token_type = 2;
+  int32 expires_in = 3;
+  string refresh_token = 4;
+}
+
+message AuthRequest {
+  string tenant_id = 1;
+  string scope = 2;
+}
+
+message AuthResponse {
+  string code = 1;
+}
+
+message TokenRevocationRequest {
+  string token = 1;
+}
+
+message TokenRevocationResponse {
+  string status = 1;
+}
+
+message TokenIntrospectRequest {
+  string token = 1;
+}
+
+message IntrospectResponse {
+  bool active = 1;
+  string sub = 2;
+  string tenant_id = 3;
+  int64 exp = 4;
+  string token_type = 5;
+}

@@ -1,0 +1,148 @@
+openapi: 3.0.3
+info:
+  title: Auth Platform API
+  version: 0.1.0
+servers:
+  - url: http://localhost:8080
+    description: Local development
+paths:
+  /auth/authorize:
+    post:
+      summary: Initiate authorization flow
+      operationId: authorize
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                tenant_id:
+                  type: string
+      responses:
+        '200':
+          description: Authorization code issued
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: string
+  /token:
+    post:
+      summary: Token endpoint for OAuth2 flows
+      operationId: token
+      requestBody:
+        required: true
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                grant_type:
+                  type: string
+      responses:
+        '200':
+          description: Token response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  access_token:
+                    type: string
+                  token_type:
+                    type: string
+                  expires_in:
+                    type: integer
+                  refresh_token:
+                    type: string
+  /token/revoke:
+    post:
+      summary: Revoke a token
+      operationId: revokeToken
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Token revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+  /token/introspect:
+    post:
+      summary: Introspect a token
+      operationId: introspect
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+      responses:
+        '200':
+          description: Token introspection result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  active:
+                    type: boolean
+  /tenants/info:
+    get:
+      summary: Get tenant information
+      parameters:
+        - in: query
+          name: tenant_id
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Tenant info
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  tenant_id:
+                    type: string
+  /users:
+    post:
+      summary: Create a user (admin)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                tenant_id:
+                  type: string
+      responses:
+        '200':
+          description: User created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
