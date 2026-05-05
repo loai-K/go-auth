@@ -1,0 +1,12 @@
+version: 1
+server:
+  http:
+    address: 0.0.0.0:3593
+  grpc:
+    address: 0.0.0.0:3594
+storage:
+  type: memory
+policies:
+  - id: sample
+    version: 1
+    description: baseline sample policy

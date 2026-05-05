@@ -14,6 +14,7 @@ import (
 	httpx "github.com/loaikanou/GoAuth/internal/httpx"
 	"github.com/loaikanou/GoAuth/internal/store"
 	"github.com/loaikanou/GoAuth/internal/token"
+	"github.com/loaikanou/GoAuth/internal/policy"
 )
 
 type Repo interface {
@@ -23,8 +24,9 @@ type Repo interface {
 
 // Server aggregates core services for the MVP HTTP API.
 type Server struct {
-	Repo     Repo
-	TokenSvc *token.Service
+    Store    *store.InMemoryStore
+    TokenSvc *token.Service
+    Policy   policy.PolicyEngine
 }
 
 func main() {
@@ -37,11 +39,9 @@ func main() {
 		log.Fatalf("invalid JWT signing configuration: %v", err)
 	}
 
-	repo, closeRepo := loadRepo()
-	if closeRepo != nil {
-		defer closeRepo()
-	}
-	srv := &Server{Repo: repo, TokenSvc: ts}
+  st := store.NewInMemoryStore()
+  policyEngine := &policy.MockPolicyEngine{}
+  srv := &Server{Store: st, TokenSvc: ts, Policy: policyEngine}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("/health", srv.healthHandler)
@@ -94,9 +94,22 @@ func (s *Server) healthHandler(w http.ResponseWriter, r *http.Request) {
 
 // authorizeHandler returns a placeholder authorization code.
 func (s *Server) authorizeHandler(w http.ResponseWriter, r *http.Request) {
-	// In a real system, this would redirect to a login page or consent screen.
-	resp := map[string]string{"code": "AUTH_CODE_12345"}
-	httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: resp})
+    // Basic authorization decision via policy engine (Phase 2): evaluate access
+    tenantID := r.URL.Query().Get("tenant_id")
+    if tenantID == "" {
+        tenantID = "tenant1"
+    }
+    allowed, reason, err := s.Policy.Evaluate("system", "authorize", "tenant/"+tenantID)
+    if err != nil {
+        http.Error(w, err.Error(), http.StatusInternalServerError)
+        return
+    }
+    if !allowed {
+        http.Error(w, reason, http.StatusForbidden)
+        return
+    }
+    resp := map[string]string{"code": "AUTH_CODE_12345"}
+    httpx.WriteJSON(w, httpx.APIResponse{Success: true, Data: resp})
 }
 
 // tokenHandler issues access/refresh tokens for MVP flows.
