@@ -1,4 +1,4 @@
-# GoAuth — Production‑Grade Auth Platform (Phase 1 MVP)
+# GoAuth — Production‑Grade Auth Platform
 
 GoAuth is a production‑grade authentication and authorization platform built in Go. This repository contains a Phase 1 MVP scaffold (in‑memory MVP server, REST/gRPC surface, OpenAPI/Proto contracts, and initial migration groundwork) and a plan for progression to a Postgres‑backed, multi‑tenant, policy‑driven platform.
 
@@ -17,6 +17,12 @@ GoAuth is a production‑grade authentication and authorization platform built i
     - GET /tenants/info?tenant_id=...
     - POST /users
   - The OpenAPI contract for REST is located at `api/openapi/auth.yaml` and the gRPC surface is at `proto/auth.proto`.
+
+## Environment variables
+- PORT: The port number to listen on. Default: 8080
+- POSTGRES_DSN: The DSN for the Postgres database. Default: "host=localhost port=5432 user=postgres password=postgres dbname=goauth sslmode=disable" if not set
+- JWT_SIGNING_KEY: The secret key used for signing JWT tokens. Default: "your_jwt_signing_key"
+USE: "openssl rand -hex 32" or "openssl rand -base64 32"
 
 ## Project structure
 - cmd/                – main executables (auth server, playgrounds)
